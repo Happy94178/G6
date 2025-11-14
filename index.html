@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>兩量關係與比：數學小英雄挑戰 - 第6單元</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0f9ff; /* 淡藍色背景 */
+        }
+        .game-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            position: relative; /* Essential for confetti positioning */
+            overflow: hidden; /* To keep confetti inside */
+        }
+        .level-btn {
+            background-color: #3b82f6; /* 藍色 */
+            color: white;
+            font-weight: bold;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: none;
+            width: 100%;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        .level-btn:hover {
+            background-color: #2563eb;
+        }
+        .level-btn:disabled {
+            background-color: #9ca3af; /* 灰色 */
+            cursor: not-allowed;
+        }
+        .question-card {
+            padding: 1.5rem;
+            background-color: #eff6ff; /* 淺藍色 */
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        .option-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background-color: white;
+            border: 2px solid #93c5fd; /* 藍色邊框 */
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+        .option-btn:hover {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+        }
+        .feedback {
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 0.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        .correct {
+            color: #15803d; /* 綠色 */
+            background-color: #dcfce7;
+        }
+        .incorrect {
+            color: #b91c1c; /* 紅色 */
+            background-color: #fee2e2;
+        }
+        /* 移除 Next Question Button 的樣式，因為現在會自動跳轉 */
+        
+        /* Confetti Styles for the fun effect */
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(600px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="game-container">
+        <!-- 標題 -->
+        <h1 id="game-title" class="text-3xl font-bold text-center text-blue-700 mb-6">兩量關係與比：數學小英雄挑戰 🚀</h1>
+        
+        <!-- 關卡選擇畫面 -->
+        <div id="level-select-screen">
+            <h2 class="text-xl font-semibold text-center mb-4">請選擇挑戰關卡</h2>
+            <button id="level-1-btn" onclick="startGame(1)" class="level-btn">6-1 認識基準量與比較量</button>
+            <button id="level-2-btn" onclick="startGame(2)" class="level-btn" disabled>6-2 比較量未知問題</button>
+            <button id="level-3-btn" onclick="startGame(3)" class="level-btn" disabled>6-3 倍的關係與比</button>
+            <button id="level-4-btn" onclick="startGame(4)" class="level-btn" disabled>6-4 基準量未知問題</button>
+        </div>
+
+        <!-- 遊戲畫面 -->
+        <div id="game-screen" class="hidden">
+            <h2 id="level-title" class="text-2xl font-bold text-blue-600 mb-4"></h2>
+            
+            <div id="question-container" class="question-card">
+                <p id="question-text" class="text-lg mb-4"></p>
+                <div id="options-container"></div>
+            </div>
+
+            <!-- 反饋區塊 - 答錯後會顯示，但下一題按鈕移除 -->
+            <div id="feedback-container" class="feedback hidden"></div>
+            
+            <!-- 移除 next-question-btn -->
+            <button id="back-to-levels-btn" class="level-btn hidden mt-4" onclick="showLevelSelect()">返回關卡選擇</button>
+        </div>
+
+        <!-- 勝利畫面 - 增加評分顯示區塊 -->
+        <div id="win-screen" class="hidden text-center">
+            <h2 class="text-3xl font-bold text-yellow-500 mb-4">🏆 恭喜你！🏆</h2>
+            <p id="final-score" class="text-2xl mb-2 font-semibold text-gray-800"></p>
+            <p id="final-rating" class="text-xl mb-6 text-blue-600"></p>
+            <!-- 勝利圖案 -->
+            <img id="win-image" src="https://placehold.co/300x200/22c55e/ffffff?text=Great+Job!+%E2%9C%85" alt="勝利圖片" class="rounded-lg mx-auto mb-6">
+            <button class="level-btn" onclick="resetGame()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        const allQuestions = {
+            1: [
+                { 
+                    q: "小翰身高 150 公分，長頸鹿身高是小翰的 3 倍。請問「基準量」是誰的身高？", 
+                    o: ["小翰的身高", "長頸鹿的身高", "3 倍"], 
+                    a: 0 // 答案是第一個選項 (index 0)
+                },
+                { 
+                    q: "飲料小杯 360 毫升，中杯 500 毫升。如果說「小杯容量是中杯容量的 0.72 倍」，請問「比較量」是？", 
+                    o: ["小杯容量", "中杯容量", "0.72 倍"], 
+                    a: 0
+                },
+                {
+                    q: "在「A 是 B 的 5 倍」這句話中，當作『1』的量 (B)，被稱為？",
+                    o: ["基準量", "比較量", "5 倍"],
+                    a: 0 // 基準量 (Base Quantity)
+                },
+                {
+                    q: "在「A 是 B 的 5 倍」這句話中，被比較的量 (A)，被稱為？",
+                    o: ["基準量", "比較量", "5 倍"],
+                    a: 1 // 比較量 (Compared Quantity)
+                },
+                {
+                    q: "如何算出「比較量是基準量的幾倍」？",
+                    o: ["基準量 ÷ 比較量", "比較量 × 基準量", "比較量 ÷ 基準量"],
+                    a: 2 // 比較量 ÷ 基準量
+                }
+            ],
+            2: [
+                { 
+                    q: "紅繩子長 36 公分，藍繩子是紅繩子的 6 倍長。藍繩子有多長？", 
+                    o: ["216 公分", "6 公分", "42 公分"], 
+                    a: 0 // 36 * 6 = 216
+                },
+                { 
+                    q: "皮皮有 100 元，丹丹的錢是皮皮的 3.2 倍。兩人「共有」多少元？", 
+                    o: ["320 元", "420 元", "220 元"], 
+                    a: 1 // 100 * (1 + 3.2) = 420
+                },
+                {
+                    q: "一件商品成本 50 元，成本加二成作為定價。定價是多少元？ (提示：二成 = 20% = 0.2)",
+                    o: ["10 元", "50 元", "60 元"],
+                    a: 2 // 50 * (1 + 0.2) = 60
+                },
+                {
+                    q: "知道「基準量」和「倍數」，如何算出「比較量」？",
+                    o: ["基準量 × 倍數", "基準量 ÷ 倍數", "倍數 ÷ 基準量"],
+                    a: 0 // 基準量 × 倍數
+                },
+                {
+                    q: "A 城市綠地 210 公頃，B 城市是 A 的 0.8 倍。兩城市「相差」多少公頃？",
+                    o: ["168 公頃", "42 公頃", "378 公頃"],
+                    a: 1 // 210 * (1 - 0.8) = 42
+                }
+            ],
+            3: [
+                { 
+                    q: "大狗體重 15 公斤，小貓體重 4 公斤。大狗體重是小貓的幾倍？", 
+                    o: ["15 / 4 倍", "4 / 15 倍", "11 倍"], 
+                    a: 0 // 比較量 / 基準量 = 15 / 4
+                },
+                { 
+                    q: "男生人數是女生的 0.95 倍。男生和女生人數的比可以記為？(男生 : 女生)", 
+                    o: ["0.95 : 1", "1 : 0.95", "1 : 1"], 
+                    a: 0 // 比較量 : 基準量 = (幾倍) : 1
+                },
+                {
+                    q: "「甲是乙的 1.5 倍」，用比來表示 (甲 : 乙)，且基準量 (乙) 是 1，會是？",
+                    o: ["1.5 : 1", "1 : 1.5", "3 : 2"],
+                    a: 0 // (幾倍) : 1
+                },
+                {
+                    q: "在「15 : 4」這個比中，它的「比值」(倍數) 是多少？",
+                    o: ["15 / 4", "4 / 15", "15"],
+                    a: 0 // 15 ÷ 4
+                },
+                {
+                    q: "六年甲班男生 16 人，女生 10 人。男生和「全班」人數的比，化為最簡整數比是？",
+                    o: ["8 : 5", "8 : 13", "16 : 26"],
+                    a: 1 // 16 : (16 + 10) = 16 : 26 = 8 : 13
+                }
+            ],
+            4: [
+                { 
+                    q: "哥哥存了 1000 元，是妹妹的 4 倍。妹妹存了多少元？", 
+                    o: ["250 元", "4000 元", "1000 元"], 
+                    a: 0 // 基準量 = 比較量 / 倍數 = 1000 / 4
+                },
+                { 
+                    q: "商品打八折後賣 1600 元。請問「定價」(原價)是多少元？ (提示：八折 = 0.8 倍)", 
+                    o: ["1280 元", "2000 元", "1600 元"], 
+                    a: 1 // 基準量(定價) = 比較量(售價) / 倍數 = 1600 / 0.8
+                },
+                {
+                    q: "颱風後青江菜漲價 40%，漲價後一公斤賣 28 元。原來賣多少元？ (提示：漲價40% = 1 + 0.4 = 1.4 倍)",
+                    o: ["20 元", "39.2 元", "11.2 元"],
+                    a: 0 // 基準量(原價) = 比較量(售價) / 倍數 = 28 / 1.4
+                },
+                {
+                    q: "知道「比較量」和「倍數」，如何算出「基準量」？",
+                    o: ["比較量 × 倍數", "基準量 ÷ 比較量", "比較量 ÷ 倍數"],
+                    a: 2 // 比較量 ÷ 倍數
+                },
+                {
+                    q: "服飾店打七折，褲子比定價「便宜了」165 元。請問定價是多少元？ (提示：便宜了 1 - 0.7 = 0.3 倍)",
+                    o: ["235 元", "550 元", "115.5 元"],
+                    a: 1 // 基準量 = 165 / (1 - 0.7) = 550
+                }
+            ]
+        };
+
+        const levelTitles = {
+            1: "6-1 認識基準量與比較量",
+            2: "6-2 比較量未知問題",
+            3: "6-3 倍的關係與比",
+            4: "6-4 基準量未知問題"
+        };
+
+        let currentLevel = 0;
+        let currentQuestionIndex = 0;
+        let levelsCompleted = { 1: false, 2: false, 3: false, 4: false };
+        let correctAnswersCount = 0; 
+        
+        const levelSelectScreen = document.getElementById('level-select-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const winScreen = document.getElementById('win-screen');
+        const levelTitle = document.getElementById('level-title');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const backToLevelsBtn = document.getElementById('back-to-levels-btn');
+        const winImage = document.getElementById('win-image');
+        
+        // --- Confetti Logic Variables ---
+        const confettiColors = ['#fce18a', '#ff726d', '#b486e9', '#63d8cc', '#22c55e'];
+        let confettiInterval;
+        // ---------------------------------
+
+        function startGame(level) {
+            currentLevel = level;
+            currentQuestionIndex = 0;
+            levelSelectScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            levelTitle.innerText = levelTitles[currentLevel];
+            showQuestion();
+        }
+
+        function showQuestion() {
+            // 清除上一題的內容
+            optionsContainer.innerHTML = '';
+            feedbackContainer.classList.add('hidden');
+            backToLevelsBtn.classList.add('hidden');
+            
+            // 檢查是否還有問題
+            const questionData = allQuestions[currentLevel][currentQuestionIndex];
+            
+            if (!questionData) {
+                // 此關卡結束
+                levelCompleted();
+                return;
+            }
+
+            questionText.innerText = `第 ${currentQuestionIndex + 1} 題: ${questionData.q}`;
+
+            // 顯示選項按鈕
+            questionData.o.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.classList.add('option-btn');
+                button.innerText = option;
+                // 點擊後檢查答案並直接進入下一題
+                button.onclick = () => checkAnswer(index, questionData.a);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selectedIndex, correctIndex) {
+            // 讓所有按鈕失效，避免重複點擊
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.style.cursor = 'not-allowed';
+            });
+
+            feedbackContainer.classList.remove('hidden');
+            
+            if (selectedIndex === correctIndex) {
+                correctAnswersCount++; // 答對總數加 1
+                feedbackContainer.innerText = "答對了！👍";
+                feedbackContainer.className = 'feedback correct';
+            } else {
+                feedbackContainer.innerText = "答錯了... 正確答案是：" + allQuestions[currentLevel][currentQuestionIndex].o[correctIndex];
+                feedbackContainer.className = 'feedback incorrect';
+            }
+            
+            // 標示出正確答案
+            document.querySelectorAll('.option-btn')[correctIndex].style.backgroundColor = '#dcfce7';
+            document.querySelectorAll('.option-btn')[correctIndex].style.borderColor = '#16a34a';
+            
+            // 標示出錯誤選項 (如果選錯的話)
+            if (selectedIndex !== correctIndex) {
+                document.querySelectorAll('.option-btn')[selectedIndex].style.backgroundColor = '#fee2e2';
+                document.querySelectorAll('.option-btn')[selectedIndex].style.borderColor = '#b91c1c';
+            }
+
+            // 根據新的流程，1秒後自動跳轉到下一題/結束關卡
+            setTimeout(() => {
+                currentQuestionIndex++;
+                showQuestion();
+            }, 1000);
+        }
+
+        function levelCompleted() {
+            levelsCompleted[currentLevel] = true;
+            feedbackContainer.innerText = `🎉 恭喜完成 ${levelTitles[currentLevel]} 關卡！`;
+            feedbackContainer.className = 'feedback correct';
+            optionsContainer.innerHTML = '';
+            questionText.innerText = '太厲害了！';
+            backToLevelsBtn.classList.remove('hidden');
+            
+            updateLevelButtons();
+            
+            // 檢查是否所有關卡都完成了
+            if (Object.values(levelsCompleted).every(status => status === true)) {
+                setTimeout(showWinScreen, 1500);
+            }
+        }
+
+        function updateLevelButtons() {
+            // 解鎖下一關
+            if (levelsCompleted[1]) document.getElementById('level-2-btn').disabled = false;
+            if (levelsCompleted[2]) document.getElementById('level-3-btn').disabled = false;
+            if (levelsCompleted[3]) document.getElementById('level-4-btn').disabled = false;
+            
+            // 標示已完成的關卡
+            for (let level = 1; level <= 4; level++) {
+                if (levelsCompleted[level]) {
+                    const btn = document.getElementById(`level-${level}-btn`);
+                    btn.innerText = `${levelTitles[level]} (已完成 ✔️)`;
+                    btn.style.backgroundColor = '#16a34a'; // 變綠色
+                }
+            }
+        }
+
+        function showLevelSelect() {
+            stopConfetti(); // 停止灑花效果
+            gameScreen.classList.add('hidden');
+            levelSelectScreen.classList.remove('hidden');
+            winScreen.classList.add('hidden');
+        }
+        
+        // --- Confetti Helper Functions ---
+        function createConfetti() {
+            const confetti = document.createElement('div');
+            confetti.classList.add('confetti');
+            confetti.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+            
+            const size = Math.random() * 7 + 5; 
+            confetti.style.width = `${size}px`;
+            confetti.style.height = `${size}px`;
+            confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            
+            const gameContainer = document.querySelector('.game-container');
+            const containerWidth = gameContainer.offsetWidth;
+            const startX = Math.random() * containerWidth;
+
+            confetti.style.left = `${startX}px`;
+            confetti.style.top = `-20px`; 
+            
+            confetti.style.animationName = 'confetti-fall';
+            confetti.style.animationDuration = `${Math.random() * 3 + 2}s`; 
+            confetti.style.animationDelay = `${Math.random() * 0.5}s`; 
+            
+            gameContainer.appendChild(confetti);
+
+            setTimeout(() => {
+                confetti.remove();
+            }, 5000);
+        }
+
+        function startConfetti() {
+            if (confettiInterval) clearInterval(confettiInterval); 
+            
+            // Initial burst
+            for (let i = 0; i < 30; i++) {
+                createConfetti();
+            }
+
+            // Continuous stream
+            confettiInterval = setInterval(() => {
+                for (let i = 0; i < 5; i++) {
+                    createConfetti();
+                }
+            }, 100);
+        }
+        
+        function stopConfetti() {
+            if (confettiInterval) clearInterval(confettiInterval);
+            document.querySelectorAll('.confetti').forEach(c => c.remove());
+        }
+        // ---------------------------------
+
+        function showWinScreen() {
+            stopConfetti(); // 確保開始時是停止狀態
+            gameScreen.classList.add('hidden');
+            levelSelectScreen.classList.add('hidden');
+            winScreen.classList.remove('hidden');
+
+            const totalQuestions = Object.values(allQuestions).flat().length; // 總題數：5題 x 4關 = 20題
+            const scoreText = document.getElementById('final-score');
+            const ratingText = document.getElementById('final-rating');
+
+            // 換算成百分比分數 (滿分 100 分)
+            const scorePercentage = Math.round((correctAnswersCount / totalQuestions) * 100);
+
+            scoreText.innerText = `你的得分是：${correctAnswersCount} / ${totalQuestions} 題 (${scorePercentage} 分)`;
+
+            let ratingMessage = "";
+            let imageUrl = "https://placehold.co/300x200/f87171/ffffff?text=Keep+Trying+%E2%9D%8C"; // 預設失敗圖案
+            
+            if (scorePercentage === 100) {
+                ratingMessage = "🏅 數學大師！你完全掌握了這個單元！";
+                imageUrl = "https://placehold.co/300x200/22c55e/ffffff?text=PERFECT!+%F0%9F%A5%87";
+                startConfetti();
+            } else if (scorePercentage >= 80) {
+                ratingMessage = "⭐ 表現優異！你已經是很棒的數學小英雄！";
+                imageUrl = "https://placehold.co/300x200/22c55e/ffffff?text=Great+Job!+%E2%9C%85";
+                startConfetti(); // 達到 80 分以上，開始灑花
+            } else if (scorePercentage >= 60) {
+                ratingMessage = "👍 繼續努力！再多練習幾次就會更棒喔！";
+                imageUrl = "https://placehold.co/300x200/facc15/ffffff?text=Nice+Work!";
+            } else {
+                ratingMessage = "💪 沒關係！我們一起找出哪些概念需要加強！";
+            }
+            ratingText.innerText = ratingMessage;
+            winImage.src = imageUrl; // 更新圖片
+
+        }
+
+        function resetGame() {
+            stopConfetti(); // 重設時停止灑花效果
+            levelsCompleted = { 1: false, 2: false, 3: false, 4: false };
+            correctAnswersCount = 0; // 重設分數
+            document.getElementById('level-1-btn').disabled = false;
+            document.getElementById('level-2-btn').disabled = true;
+            document.getElementById('level-3-btn').disabled = true;
+            document.getElementById('level-4-btn').disabled = true;
+            
+            for (let level = 1; level <= 4; level++) {
+                const btn = document.getElementById(`level-${level}-btn`);
+                btn.innerText = levelTitles[level];
+                btn.style.backgroundColor = '#3b82f6'; // 恢復藍色
+            }
+            showLevelSelect();
+        }
+    </script>
+
+</body>
+</html>
